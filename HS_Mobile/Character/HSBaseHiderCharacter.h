@@ -13,5 +13,7 @@ UCLASS()
 class HS_MOBILE_API AHSBaseHiderCharacter : public AHSBaseCharacter
 {
 	GENERATED_BODY()
-	
+
+public:
+	AHSBaseHiderCharacter();
 };

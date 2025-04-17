@@ -21,5 +21,24 @@ class HS_MOBILE_API UHSNetRelevancySightComponent : public UActorComponent
 public:
 	UHSNetRelevancySightComponent();
 
-	bool IsSeenBy(USphereComponent* NetRelevancySphere, const AActor* RealViewer, const AActor* Viewer) const;
+	/** 시야 내에서 대상 영역이 감지되는지 여부를 반환 */
+	bool IsSeenBy(const AActor* TargetOwner, const AActor* RealViewer, const AActor* Viewer) const;
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Sight")
+	float MaxSightDistance = 3000.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Sight")
+	float MaxSightAngleDegrees = 55.0f;
+
+	float AngleThresholdCos = 0.f;
+
+	UPROPERTY(EditAnywhere, Category = "Sight")
+	float Offset = 200.f; // 오프셋 거리
+	
+	UPROPERTY(EditAnywhere, Category = "Sight")
+	float HeightOffset = 30.f; // 높이 오프셋
+
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	bool bDrawDebug = true;
 };

@@ -16,4 +16,22 @@ class HS_MOBILE_API AHSGameModeBase : public AGameModeBase
 	
 public:
 	AHSGameModeBase();
+
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
+	TSubclassOf<class AHSSeekerCharacter> SeekerClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
+	TSubclassOf<class AHSBaseHiderCharacter> HiderClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Spawn")
+	FTransform SeekerSpawnTransform;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Spawn")
+	FTransform HiderSpawnTransform;
+
+private:
+	int32 PlayerCount = 0;
 };

@@ -1,44 +1,95 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "HSNetRelevancySightComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Components/SphereComponent.h"
-#include "GameFramework/Actor.h"
-#include "DrawDebugHelpers.h" // 꼭 필요!
+#include "DrawDebugHelpers.h"
 
 UHSNetRelevancySightComponent::UHSNetRelevancySightComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+
+	AngleThresholdCos = FMath::Cos(FMath::DegreesToRadians(MaxSightAngleDegrees));
 }
 
-bool UHSNetRelevancySightComponent::IsSeenBy(USphereComponent* NetRelevancySphere, const AActor* RealViewer, const AActor* Viewer) const
+bool UHSNetRelevancySightComponent::IsSeenBy(const AActor* TargetOwner, const AActor* RealViewer, const AActor* Viewer) const
 {
-	if (!NetRelevancySphere || !Viewer) return false;
+	if (!TargetOwner || !Viewer)
+	{
+		return false;
+	}
 
-	const FVector TargetLocation = NetRelevancySphere->GetComponentLocation();
-	const FVector ViewerLocation = Viewer->GetActorLocation();
+	// 기본값: Actor 기준
+	FVector ViewerLocation = Viewer->GetActorLocation();
+	FVector ViewDirection = Viewer->GetActorForwardVector();
 
-	// 거리 기반 컷
-	constexpr float MaxSightDistance = 2000.0f;
+	// 카메라 기준으로 보정
+	if (const APawn* ViewerPawn = Cast<APawn>(Viewer))
+	{
+		if (const APlayerController* PC = Cast<APlayerController>(ViewerPawn->GetController()))
+		{
+			ViewDirection = PC->GetControlRotation().Vector();
+
+			if (const APlayerCameraManager* CameraManager = PC->PlayerCameraManager)
+			{
+				ViewerLocation = CameraManager->GetCameraLocation();
+			}
+		}
+	}
+
+	const FVector TargetLocation = TargetOwner->GetActorLocation();
+
+	// 거리 컷
 	if (FVector::DistSquared(ViewerLocation, TargetLocation) > FMath::Square(MaxSightDistance))
 	{
 		return false;
 	}
 
-	 // 시야각 기반 컷 (잠시 주석처리해도 됨)
-	 const FVector ToTarget = (TargetLocation - ViewerLocation).GetSafeNormal();
-	 const FVector ViewDirection = Viewer->GetActorForwardVector();
-	 if (FVector::DotProduct(ToTarget, ViewDirection) < FMath::Cos(FMath::DegreesToRadians(75.0f)))
-	 {
-	     return false;
-	 }
-
-	// 실제 라인 오브 사이트 체크
-	if (const AController* Controller = Cast<AController>(Viewer))
+	// 시야각 컷
+	const FVector ToTarget = (TargetLocation - ViewerLocation).GetSafeNormal();
+	if (FVector::DotProduct(ViewDirection, ToTarget) < AngleThresholdCos)
 	{
-		return Controller->LineOfSightTo(NetRelevancySphere->GetOwner());
+		return false;
 	}
 
-	// Controller가 아니라면 일단 기본적으로 true 반환 (디버깅용)
-	return true;
+	// ------------------------------------------
+	// 라인 트레이스: 앞/뒤/좌/우 4개 방향만 체크
+	// ------------------------------------------
+	TArray<FVector> Directions;
+	Directions.Add(TargetLocation + FVector(Offset, 0, HeightOffset));   // 앞
+	Directions.Add(TargetLocation + FVector(-Offset, 0, HeightOffset));   // 뒤
+	Directions.Add(TargetLocation + FVector(0, Offset, HeightOffset));     // 오른쪽
+	Directions.Add(TargetLocation + FVector(0, -Offset, HeightOffset));     // 왼쪽
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(NetRelevancySight), true, Viewer);
+	bool bCanSee = false;
+
+	for (const FVector& Point : Directions)
+	{
+		FHitResult Hit;
+		const bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, ViewerLocation, Point, ECC_Visibility, Params);
+
+		if (!bHit || Hit.GetActor() == TargetOwner)
+		{
+			bCanSee = true;
+
+			if (bDrawDebug)
+			{
+				DrawDebugLine(GetWorld(), ViewerLocation, Point, FColor::Green, false, 1.0f, 0, 1.0f);
+			}
+			break; // 하나라도 성공하면 바로 통과
+		}
+
+		if (bDrawDebug)
+		{
+			DrawDebugLine(GetWorld(), ViewerLocation, Point, FColor::Red, false, 1.0f, 0, 1.0f);
+		}
+	}
+
+	// 디버그: 감지 지점 표시
+	if (bDrawDebug)
+	{
+		DrawDebugSphere(GetWorld(), TargetLocation, 200.f, 12, bCanSee ? FColor::Green : FColor::Red, false, 1.0f);
+	}
+
+	return bCanSee;
 }

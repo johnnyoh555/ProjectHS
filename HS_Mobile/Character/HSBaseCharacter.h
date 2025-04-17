@@ -40,7 +40,7 @@ protected:
 	void Landed(const FHitResult& Hit) override;
 	void UpdateMovementSpeed();
 	// = 0 대신 이 매크로를 쓰면, 컴파일러에게 이 함수는 반드시 파생 클래스에서 구현해야 함을 알림
-	virtual void StartInteract() PURE_VIRTUAL(AHSBaseCharacter::StartInteract, );
+	virtual void StartInteract(); /* PURE_VIRTUAL(AHSBaseCharacter::StartInteract, );*/
 
 	// 지금은 이렇게만 있어도 충분
 	bool bIsRunning = false;
@@ -86,10 +86,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UCameraComponent> FollowCamera;
-
-	// 연관성 판정용
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetRelevancy", Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class USphereComponent> NetRelevancySphere;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetRelevancy", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UHSNetRelevancySightComponent> NetRelevancySightComponent;

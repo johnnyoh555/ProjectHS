@@ -51,8 +51,11 @@ void AHSBaseCharacter::BeginPlay()
 void AHSBaseCharacter::InitCapsule()
 {
 	GetCapsuleComponent()->InitCapsuleSize(40.f, 80.0f);
-	GetCapsuleComponent()->SetCollisionProfileName(TEXT("Pawn"));
 	GetCapsuleComponent()->SetWorldScale3D(FVector(1.0f, 1.0f, 1.0f));
+	/*GetCapsuleComponent()->SetCollisionProfileName(TEXT("Pawn"));*/
+
+	GetCapsuleComponent()->SetCollisionProfileName(TEXT("NoCameraBlock"));
+	GetMesh()->SetCollisionProfileName(TEXT("NoCameraBlock"));
 }
 
 void AHSBaseCharacter::InitMesh()
@@ -71,11 +74,11 @@ void AHSBaseCharacter::InitMesh()
 
 	GetMesh()->SetRelativeLocationAndRotation(FVector(0.0f, 0.0f, -78.0f), FRotator(0.0f, -90.0f, 0.0f));
 	GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
-	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
 }
 
 void AHSBaseCharacter::InitCamera()
 {
+	// 카메라 붐을 생성하고 루트 컴포넌트에 부착합니다.
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 
@@ -133,13 +136,6 @@ void AHSBaseCharacter::InitComponent()
 		CharacterStatDataAsset = StatDataAssetRef.Object;
 	}
 
-
-	NetRelevancySphere = CreateDefaultSubobject<USphereComponent>(TEXT("NetRelevancySphere"));
-	NetRelevancySphere->SetupAttachment(RootComponent);
-	NetRelevancySphere->SetSphereRadius(200.f);
-	NetRelevancySphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	NetRelevancySphere->SetHiddenInGame(true);
-
 	NetRelevancySightComponent = CreateDefaultSubobject<UHSNetRelevancySightComponent>(TEXT("NetRelevancySightComponent"));
 }
 
@@ -175,6 +171,7 @@ void AHSBaseCharacter::SetCharacterStatData()
 	CameraBoom->bInheritYaw = CharacterStatDataAsset->bInheritYaw;
 	CameraBoom->bInheritRoll = CharacterStatDataAsset->bInheritRoll;
 	CameraBoom->bDoCollisionTest = CharacterStatDataAsset->bDoCollisionTest;
+	CameraBoom->ProbeChannel = ECollisionChannel::ECC_GameTraceChannel1; // CameraCollision 채널 번호 확인
 
 	WalkSpeed = CharacterStatDataAsset->WalkSpeed;
 	RunSpeed = CharacterStatDataAsset->RunSpeed;
@@ -253,6 +250,10 @@ void AHSBaseCharacter::UpdateMovementSpeed()
 	GetCharacterMovement()->MaxWalkSpeed = TargetSpeed;
 }
 
+void AHSBaseCharacter::StartInteract()
+{
+}
+
 void AHSBaseCharacter::ServerSetRunning_Implementation(bool bNewRunning)
 {
 	bIsRunning = bNewRunning;
@@ -267,9 +268,9 @@ bool AHSBaseCharacter::IsNetRelevantFor(const AActor* RealViewer, const AActor* 
 		return true;
 	}
 
-	if (NetRelevancySightComponent && NetRelevancySphere)
+	if (NetRelevancySightComponent)
 	{
-		return NetRelevancySightComponent->IsSeenBy(NetRelevancySphere, RealViewer, Viewer);
+		return NetRelevancySightComponent->IsSeenBy(this, RealViewer, Viewer);
 	}
 
 	return Super::IsNetRelevantFor(RealViewer, Viewer, SrcLocation);

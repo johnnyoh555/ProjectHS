@@ -5,20 +5,21 @@
 #include "Character/HSBaseHiderCharacter.h"
 #include "GameFramework/Character.h"
 #include "Animation/AnimInstance.h"
-#include "Kismet/GameplayStatics.h"
-#include "Net/UnrealNetwork.h"  // DOREPLIFETIME 매크로 정의
+#include "TimerManager.h"
+#include "Net/UnrealNetwork.h" // DOREPLIFETIME 매크로 정의
+
+// === Constructor & Lifecycle ===
 
 UHSSeekerAttackComponent::UHSSeekerAttackComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
     SetIsReplicatedByDefault(true);
 
-    // 박스 컴포넌트 생성
     AttackBox = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackBox"));
-    AttackBox->SetBoxExtent(FVector(60.f, 70.f, 80.f)); // 원하는 크기로 조절
+    AttackBox->SetBoxExtent(FVector(60.f, 70.f, 80.f));
     AttackBox->SetCollisionProfileName(TEXT("AttackTrigger"));
     AttackBox->SetGenerateOverlapEvents(true);
-    AttackBox->SetHiddenInGame(false); // 개발 중엔 영역이 보이게
+    AttackBox->SetHiddenInGame(false);
 
     static ConstructorHelpers::FObjectFinder<UAnimMontage> MontObj(TEXT("/Game/Animation/Montage/AM_Seeker_Attack.AM_Seeker_Attack"));
     if (MontObj.Succeeded())
@@ -36,7 +37,7 @@ void UHSSeekerAttackComponent::OnRegister()
         if (USceneComponent* Root = Owner->GetRootComponent())
         {
             AttackBox->AttachToComponent(Root, FAttachmentTransformRules::SnapToTargetIncludingScale);
-            AttackBox->SetRelativeLocation(FVector(50.f, 0.f, 0.f)); // 캐릭터 앞쪽
+            AttackBox->SetRelativeLocation(FVector(50.f, 0.f, 0.f));
         }
     }
 }
@@ -48,6 +49,8 @@ void UHSSeekerAttackComponent::BeginPlay()
     AttackBox->OnComponentBeginOverlap.AddDynamic(this, &UHSSeekerAttackComponent::OnAttackBoxBeginOverlap);
     AttackBox->OnComponentEndOverlap.AddDynamic(this, &UHSSeekerAttackComponent::OnAttackBoxEndOverlap);
 }
+
+// === 공격 감지 ===
 
 void UHSSeekerAttackComponent::OnAttackBoxBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -71,15 +74,42 @@ void UHSSeekerAttackComponent::OnAttackBoxEndOverlap(UPrimitiveComponent* Overla
         DetectedTargets.Remove(Hider);
     }
 
-	if (DetectedTargets.Num() == 0)
+    if (DetectedTargets.Num() == 0)
     {
-        AttackBox->SetHiddenInGame(false); 
+        AttackBox->SetHiddenInGame(false);
     }
 }
 
-// 공격 요청 (클라이언트 -> 서버)
+AHSBaseHiderCharacter* UHSSeekerAttackComponent::FindNearestTarget()
+{
+    AHSBaseHiderCharacter* ClosestTarget = nullptr;
+    float MinDistSqr = MAX_FLT;
+    const FVector MyLocation = GetOwner()->GetActorLocation();
+
+    for (AHSBaseHiderCharacter* Target : DetectedTargets)
+    {
+        if (!IsValid(Target) || Target->IsDead()) continue;
+
+        const float DistSqr = FVector::DistSquared(Target->GetActorLocation(), MyLocation);
+        if (DistSqr < MinDistSqr)
+        {
+            MinDistSqr = DistSqr;
+            ClosestTarget = Target;
+        }
+    }
+    return ClosestTarget;
+}
+
+// === 공격 요청 및 처리 ===
+
 void UHSSeekerAttackComponent::RequestAttack()
 {
+    if (DetectedTargets.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("공격할 타겟이 없습니다."));
+        return;
+    }
+
     if (GetOwner()->HasAuthority())
     {
         PerformAttack();
@@ -90,11 +120,56 @@ void UHSSeekerAttackComponent::RequestAttack()
     }
 }
 
-// 서버 RPC 함수
-void UHSSeekerAttackComponent::ServerPerformAttack_Implementation()
+void UHSSeekerAttackComponent::PerformAttack()
 {
-    PerformAttack();
+    MulticastPlayAttackMontage();
 }
+
+void UHSSeekerAttackComponent::HandleAttackHitNotify()
+{
+    if (!GetOwner()->HasAuthority()) return;
+
+    AHSBaseHiderCharacter* Target = FindNearestTarget();
+    if (Target && !Target->IsDead())
+    {
+        Target->MarkAsDead();
+    }
+}
+
+// === 쿨타임 처리 ===
+
+void UHSSeekerAttackComponent::StartAttackCooldown()
+{
+    bCanAttack = false;
+
+    GetWorld()->GetTimerManager().SetTimer(
+        AttackCooldownHandle,
+        this,
+        &UHSSeekerAttackComponent::ResetAttackCooldown,
+        CooldownTime, false
+    );
+}
+
+void UHSSeekerAttackComponent::ResetAttackCooldown()
+{
+    bCanAttack = true;
+}
+
+void UHSSeekerAttackComponent::ClientStartLocalCooldown_Implementation()
+{
+    bLocalCanAttack = false;
+
+    GetWorld()->GetTimerManager().SetTimer(
+        LocalAttackCooldownHandle,
+        [this]()
+    {
+        bLocalCanAttack = true;
+    },
+        CooldownTime, false
+    );
+}
+
+// === 애니메이션 ===
 
 void UHSSeekerAttackComponent::MulticastPlayAttackMontage_Implementation()
 {
@@ -109,17 +184,26 @@ void UHSSeekerAttackComponent::MulticastPlayAttackMontage_Implementation()
     }
 }
 
-// 실제 공격 수행
-void UHSSeekerAttackComponent::PerformAttack()
+// === 서버 RPC ===
+
+void UHSSeekerAttackComponent::ServerPerformAttack_Implementation()
 {
-    MulticastPlayAttackMontage();
+    if (!bCanAttack)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("⛔ 쿨타임 중입니다."));
+        return;
+    }
+
+    StartAttackCooldown();
+    ClientStartLocalCooldown();
+    PerformAttack();
 }
+
+// === 복제 설정 ===
 
 void UHSSeekerAttackComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    // 복제할 프로퍼티 등록
     DOREPLIFETIME(UHSSeekerAttackComponent, AttackMontage);
-    // 필요하면 다른 Replicated 프로퍼티도 등록
 }
+

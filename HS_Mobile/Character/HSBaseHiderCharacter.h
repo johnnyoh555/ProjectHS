@@ -16,4 +16,21 @@ class HS_MOBILE_API AHSBaseHiderCharacter : public AHSBaseCharacter
 
 public:
 	AHSBaseHiderCharacter();
+
+	FORCEINLINE bool IsDead() const { return bIsDead; }
+	void MarkAsDead();
+	void EnterDeathPose();
+
+protected:
+
+	UPROPERTY(EditDefaultsOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> DeathMontage;
+
+	UPROPERTY(ReplicatedUsing = OnRep_bIsDead)
+	bool bIsDead = false;
+
+	UFUNCTION()
+	void OnRep_bIsDead();
+
+	void HandleDeathVisuals();
 };

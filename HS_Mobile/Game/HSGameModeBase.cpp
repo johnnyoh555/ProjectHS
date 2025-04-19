@@ -7,6 +7,7 @@
 #include "Character/HSBaseHiderCharacter.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/GameStateBase.h"
 
 AHSGameModeBase::AHSGameModeBase()
 {
@@ -35,20 +36,20 @@ AHSGameModeBase::AHSGameModeBase()
 void AHSGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
-
-    if (!NewPlayer) return;
+    if (!NewPlayer || !HiderClass || !SeekerClass) return;
 
     APawn* NewPawn = nullptr;
 
-    // 첫 번째 플레이어는 술래로 생성
-    if (PlayerCount == 0)
+    const int32 CurrentPlayerIndex = (GameState && GameState->PlayerArray.Num() > 0) ? GameState->PlayerArray.Num() - 1 : 0;
+
+    if (CurrentPlayerIndex == 0)
     {
-        // ASeekerCharacter는 술래 캐릭터
+        // 첫 번째 플레이어는 술래
         NewPawn = GetWorld()->SpawnActor<AHSSeekerCharacter>(SeekerClass, SeekerSpawnTransform);
     }
     else
     {
-        // AHiderCharacter는 도망자 캐릭터
+        // 나머지는 도망자
         NewPawn = GetWorld()->SpawnActor<AHSBaseHiderCharacter>(HiderClass, HiderSpawnTransform);
     }
 
@@ -56,6 +57,4 @@ void AHSGameModeBase::PostLogin(APlayerController* NewPlayer)
     {
         NewPlayer->Possess(NewPawn);
     }
-
-    PlayerCount++;
 }

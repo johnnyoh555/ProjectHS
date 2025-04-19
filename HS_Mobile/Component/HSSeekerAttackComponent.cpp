@@ -132,7 +132,7 @@ void UHSSeekerAttackComponent::HandleAttackHitNotify()
     AHSBaseHiderCharacter* Target = FindNearestTarget();
     if (Target && !Target->IsDead())
     {
-        Target->MarkAsDead();
+        Target->SetAsDead();
     }
 }
 

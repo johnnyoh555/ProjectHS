@@ -163,6 +163,9 @@ void AHSBaseCharacter::SetCharacterStatData()
 
 	WalkSpeed = CharacterStatDataAsset->WalkSpeed;
 	RunSpeed = CharacterStatDataAsset->RunSpeed;
+
+	GetCharacterMovement()->bEnablePhysicsInteraction = false;
+	GetCharacterMovement()->bPushForceUsingZOffset = false;
 }
 
 // Called to bind functionality to input

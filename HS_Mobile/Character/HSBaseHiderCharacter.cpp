@@ -1,18 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Character/HSBaseHiderCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/EngineTypes.h"
-#include "Net/UnrealNetwork.h"  // DOREPLIFETIME 매크로 정의
+#include "Net/UnrealNetwork.h"
 #include "Animation/AnimMontage.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Animation/HSHiderAnimInstance.h"
 
+// 생성자: 콜리전 설정, 메쉬 및 애니메이션 초기화
 AHSBaseHiderCharacter::AHSBaseHiderCharacter()
 {
-	// HiderCharacter = GameTraceChannel2
-	GetCapsuleComponent()->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel2);
+    GetCapsuleComponent()->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel2);
 
     static ConstructorHelpers::FObjectFinder<UAnimMontage> MontObj(TEXT("/Game/Animation/Montage/AM_Seeker_Attack.AM_Seeker_Attack"));
     if (MontObj.Succeeded())
@@ -33,57 +32,69 @@ AHSBaseHiderCharacter::AHSBaseHiderCharacter()
     }
 }
 
-void AHSBaseHiderCharacter::MarkAsDead()
+// BeginPlay에서 사망 상태 복제된 경우 즉시 시체 상태 반영
+void AHSBaseHiderCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+
+    /*if (!HasAuthority() && bIsDead)
+    {
+        ApplyDeathState();
+    }*/
+}
+
+// 사망 상태로 전환 (서버에서 Multicast 호출)
+void AHSBaseHiderCharacter::SetAsDead()
 {
     if (bIsDead) return;
     bIsDead = true;
 
     if (HasAuthority())
     {
-        HandleDeathVisuals(); // 서버도 직접 호출!
+        Multicast_PlayDeathMontage(); // 서버에서 애니메이션 연출 및 상태 처리 전파
+        SetLifeSpan(5.0f); // 5초 후 삭제
     }
 }
 
-void AHSBaseHiderCharacter::EnterDeathPose()
-{
-    // 1. 애니메이션 정지 (현재 프레임 유지)
-    GetMesh()->bPauseAnims = true;
-    GetMesh()->bNoSkeletonUpdate = true;
-
-    // 4. 컨트롤러 분리 (AI/플레이어 입력 차단)
-    DetachFromControllerPendingDestroy();
-
-    // 5. 위치 복제 중단 (서버 위치 덜 갱신되게)
-    SetReplicateMovement(false);
-
-    // 6. 필요 시, 시체 타이머로 Destroy 예약
-    // SetLifeSpan(5.0f);
-}
-
-void AHSBaseHiderCharacter::OnRep_bIsDead()
-{
-    if (bIsDead)
-    {
-        HandleDeathVisuals(); // 클라이언트는 Rep 통해 자동 호출
-    }
-}
-
-void AHSBaseHiderCharacter::HandleDeathVisuals()
+// 충돌 제거 및 이동 정지 처리
+void AHSBaseHiderCharacter::ApplyDeathState()
 {
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    GetMesh()->SetCollisionResponseToAllChannels(ECR_Ignore);
+
     GetCharacterMovement()->DisableMovement();
 
-    if (DeathMontage)
-    {
-        PlayAnimMontage(DeathMontage);
-    }
+    DetachFromControllerPendingDestroy(); // 컨트롤러와 분리하여 AI나 입력 제어 제거
+    SetReplicateMovement(false); // 위치 복제를 중단하여 죽은 후 서버 이동 동기화 방지
 }
 
+// 몽타주 재생을 모든 클라이언트에 전파 (서버 포함) + 상태 처리
+void AHSBaseHiderCharacter::Multicast_PlayDeathMontage_Implementation()
+{
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (DeathMontage && AnimInstance && !AnimInstance->Montage_IsPlaying(DeathMontage))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Multicast] Play Death Montage!"));
+        PlayAnimMontage(DeathMontage);
+    }
+
+    ApplyDeathState();
+}
+
+// AnimNotify를 통해 호출됨: 애니메이션 정지 및 스켈레톤 업데이트 중지
+void AHSBaseHiderCharacter::EnterDeathPoseNotify()
+{
+    /*GetMesh()->bPauseAnims = true;
+    GetMesh()->bNoSkeletonUpdate = true;*/
+}
+
+// bIsDead 변수 복제 설정
 void AHSBaseHiderCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(AHSBaseHiderCharacter, bIsDead);
 }
-

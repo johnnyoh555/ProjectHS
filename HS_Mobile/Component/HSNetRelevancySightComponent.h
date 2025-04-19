@@ -34,11 +34,11 @@ protected:
 	float AngleThresholdCos = 0.f;
 
 	UPROPERTY(EditAnywhere, Category = "Sight")
-	float Offset = 200.f; // 오프셋 거리
+	float Offset = 300.f; // 오프셋 거리
 	
 	UPROPERTY(EditAnywhere, Category = "Sight")
 	float HeightOffset = 30.f; // 높이 오프셋
 
 	UPROPERTY(EditAnywhere, Category = "Debug")
-	bool bDrawDebug = true;
+	bool bDrawDebug = false;
 };

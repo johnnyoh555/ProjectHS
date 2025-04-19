@@ -11,7 +11,7 @@ void UHSHiderDeathAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     {
         if (AHSBaseHiderCharacter* Hider = Cast<AHSBaseHiderCharacter>(Owner))
         {
-            Hider->EnterDeathPose();
+            Hider->EnterDeathPoseNotify();
         }
     }
 }

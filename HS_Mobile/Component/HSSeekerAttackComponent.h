@@ -6,7 +6,7 @@
 
 // 전방 선언
 class UBoxComponent;
-class AHSBaseHiderCharacter;
+class IHSAttackableInterface;
 class UAnimMontage;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -32,7 +32,7 @@ protected:
     TObjectPtr<UBoxComponent> AttackBox;
 
     UPROPERTY()
-    TSet<TObjectPtr<AHSBaseHiderCharacter>> DetectedTargets;
+    TArray<TScriptInterface<IHSAttackableInterface>> DetectedTargets;
 
     UFUNCTION()
     void OnAttackBoxBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -42,7 +42,7 @@ protected:
     void OnAttackBoxEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-    AHSBaseHiderCharacter* FindNearestTarget();
+    TScriptInterface<IHSAttackableInterface> FindNearestTarget();
 
     // === 공격 애니메이션 ===
     UPROPERTY(Replicated, EditAnywhere, Category = "Attack")

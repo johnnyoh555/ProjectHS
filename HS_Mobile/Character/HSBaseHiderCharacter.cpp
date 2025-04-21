@@ -37,10 +37,11 @@ void AHSBaseHiderCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    /*if (!HasAuthority() && bIsDead)
+    if (!HasAuthority() && bIsDead)
     {
         ApplyDeathState();
-    }*/
+	    UE_LOG(LogTemp, Warning, TEXT("BeginPlay: bIsDead = %s"), bIsDead ? TEXT("true") : TEXT("false"));
+    }
 }
 
 // 사망 상태로 전환 (서버에서 Multicast 호출)
@@ -52,7 +53,6 @@ void AHSBaseHiderCharacter::SetAsDead()
     if (HasAuthority())
     {
         Multicast_PlayDeathMontage(); // 서버에서 애니메이션 연출 및 상태 처리 전파
-        SetLifeSpan(5.0f); // 5초 후 삭제
     }
 }
 
@@ -67,8 +67,8 @@ void AHSBaseHiderCharacter::ApplyDeathState()
 
     GetCharacterMovement()->DisableMovement();
 
-    DetachFromControllerPendingDestroy(); // 컨트롤러와 분리하여 AI나 입력 제어 제거
-    SetReplicateMovement(false); // 위치 복제를 중단하여 죽은 후 서버 이동 동기화 방지
+    //DetachFromControllerPendingDestroy(); // 컨트롤러와 분리하여 AI나 입력 제어 제거
+    //SetReplicateMovement(false); // 위치 복제를 중단하여 죽은 후 서버 이동 동기화 방지
 }
 
 // 몽타주 재생을 모든 클라이언트에 전파 (서버 포함) + 상태 처리
@@ -85,10 +85,9 @@ void AHSBaseHiderCharacter::Multicast_PlayDeathMontage_Implementation()
 }
 
 // AnimNotify를 통해 호출됨: 애니메이션 정지 및 스켈레톤 업데이트 중지
-void AHSBaseHiderCharacter::EnterDeathPoseNotify()
+void AHSBaseHiderCharacter::EnterDeathNotify()
 {
-    /*GetMesh()->bPauseAnims = true;
-    GetMesh()->bNoSkeletonUpdate = true;*/
+    SetLifeSpan(5.0f); // 5초 후 삭제
 }
 
 // bIsDead 변수 복제 설정

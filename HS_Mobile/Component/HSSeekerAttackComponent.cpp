@@ -2,11 +2,11 @@
 
 #include "Component/HSSeekerAttackComponent.h"
 #include "Components/BoxComponent.h"
-#include "Character/HSBaseHiderCharacter.h"
 #include "GameFramework/Character.h"
 #include "Animation/AnimInstance.h"
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h" // DOREPLIFETIME 매크로 정의
+#include "Interface/HSAttackableInterface.h"
 
 // === Constructor & Lifecycle ===
 
@@ -55,9 +55,9 @@ void UHSSeekerAttackComponent::BeginPlay()
 void UHSSeekerAttackComponent::OnAttackBoxBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (AHSBaseHiderCharacter* Hider = Cast<AHSBaseHiderCharacter>(OtherActor))
+    if (OtherActor->GetClass()->ImplementsInterface(UHSAttackableInterface::StaticClass()))
     {
-        DetectedTargets.Add(Hider);
+        DetectedTargets.Add(OtherActor);
     }
 
     if (DetectedTargets.Num() > 0)
@@ -69,9 +69,9 @@ void UHSSeekerAttackComponent::OnAttackBoxBeginOverlap(UPrimitiveComponent* Over
 void UHSSeekerAttackComponent::OnAttackBoxEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-    if (AHSBaseHiderCharacter* Hider = Cast<AHSBaseHiderCharacter>(OtherActor))
+    if (OtherActor->GetClass()->ImplementsInterface(UHSAttackableInterface::StaticClass()))
     {
-        DetectedTargets.Remove(Hider);
+        DetectedTargets.Remove(OtherActor);
     }
 
     if (DetectedTargets.Num() == 0)
@@ -80,23 +80,26 @@ void UHSSeekerAttackComponent::OnAttackBoxEndOverlap(UPrimitiveComponent* Overla
     }
 }
 
-AHSBaseHiderCharacter* UHSSeekerAttackComponent::FindNearestTarget()
+TScriptInterface<IHSAttackableInterface> UHSSeekerAttackComponent::FindNearestTarget()
 {
-    AHSBaseHiderCharacter* ClosestTarget = nullptr;
+    TScriptInterface<IHSAttackableInterface> ClosestTarget;
     float MinDistSqr = MAX_FLT;
     const FVector MyLocation = GetOwner()->GetActorLocation();
 
-    for (AHSBaseHiderCharacter* Target : DetectedTargets)
+    for (const TScriptInterface<IHSAttackableInterface>& Target : DetectedTargets)
     {
-        if (!IsValid(Target) || Target->IsDead()) continue;
+        AActor* TargetActor = Cast<AActor>(Target.GetObject()); // 혹은 Target.GetObject()->GetActorLocation()
+        IHSAttackableInterface* TargetInterface = Target.GetInterface();
+        if (!TargetActor || !TargetInterface || TargetInterface->IsDead()) continue;
 
-        const float DistSqr = FVector::DistSquared(Target->GetActorLocation(), MyLocation);
+        float DistSqr = FVector::DistSquared(TargetActor->GetActorLocation(), MyLocation);
         if (DistSqr < MinDistSqr)
         {
             MinDistSqr = DistSqr;
             ClosestTarget = Target;
         }
     }
+
     return ClosestTarget;
 }
 
@@ -129,7 +132,7 @@ void UHSSeekerAttackComponent::HandleAttackHitNotify()
 {
     if (!GetOwner()->HasAuthority()) return;
 
-    AHSBaseHiderCharacter* Target = FindNearestTarget();
+    TScriptInterface<IHSAttackableInterface> Target = FindNearestTarget();
     if (Target && !Target->IsDead())
     {
         Target->SetAsDead();

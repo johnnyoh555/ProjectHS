@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/HSBaseCharacter.h"
+#include "Interface/HSAttackableInterface.h"
 #include "HSBaseHiderCharacter.generated.h"
 
 class UAnimMontage;
@@ -12,7 +13,7 @@ class UAnimMontage;
  * 도망자 캐릭터 - 사망 상태 및 연출 관리
  */
 UCLASS()
-class HS_MOBILE_API AHSBaseHiderCharacter : public AHSBaseCharacter
+class HS_MOBILE_API AHSBaseHiderCharacter : public AHSBaseCharacter, public IHSAttackableInterface
 {
 	GENERATED_BODY()
 
@@ -23,13 +24,13 @@ class HS_MOBILE_API AHSBaseHiderCharacter : public AHSBaseCharacter
 	virtual void BeginPlay() override;
 
 	// 사망 상태 설정
-	void SetAsDead();
+	virtual void SetAsDead() override;
 
 	// 사망 여부 조회
-	FORCEINLINE bool IsDead() const { return bIsDead; }
+	FORCEINLINE virtual bool IsDead() const override { return bIsDead; }
 
 	// AnimNotify로부터 호출: 애니메이션 정지 및 스켈레톤 갱신 정지
-	void EnterDeathPoseNotify();
+	virtual void EnterDeathNotify();
 
 protected:
 	// 사망 상태 시 동작 (충돌 제거, 이동 불가 등)

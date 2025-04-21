@@ -11,7 +11,8 @@ void UHSHiderDeathAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     {
         if (AHSBaseHiderCharacter* Hider = Cast<AHSBaseHiderCharacter>(Owner))
         {
-            Hider->EnterDeathPoseNotify();
+			UE_LOG(LogTemp, Warning, TEXT("Hider Death Notify Triggered"));
+            Hider->EnterDeathNotify();
         }
     }
 }

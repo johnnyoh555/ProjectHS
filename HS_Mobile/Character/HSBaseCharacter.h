@@ -33,7 +33,7 @@ protected:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	void Move(const struct FInputActionValue& Value);
+	virtual void Move(const struct FInputActionValue& Value);
 	void Look(const struct FInputActionValue& Value);
 	void ToggleRunning();
 	void Jump() override;

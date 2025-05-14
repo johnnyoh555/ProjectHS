@@ -25,5 +25,6 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual bool IsNetRelevantFor(const AActor* RealViewer, const AActor* Viewer, const FVector& SrcLocation) const override;
 
+	virtual void Move(const FInputActionValue& Value) override;
 	void MoveStop();
 };

@@ -12,7 +12,7 @@ public class HS_Mobile : ModuleRules
         PublicIncludePaths.AddRange(new string[] { "HS_Mobile" });
 
         // EnhancedInput, UI 모듈을 사용하기 위해 추가
-        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "NavigationSystem" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

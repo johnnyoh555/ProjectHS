@@ -14,7 +14,7 @@ class HS_MOBILE_API UHSSeekerAttackComponent : public UActorComponent
 {
     GENERATED_BODY()
 
-    public:
+public:
     UHSSeekerAttackComponent();
 
     // === 공격 요청 ===

@@ -12,6 +12,7 @@
 #include "Character/HSCharacterStatDataAsset.h"
 #include "Component/HSNetRelevancySightComponent.h" // 직접 생성할 .h
 #include "Components/SphereComponent.h"
+#include "Interface/HSIsAIInterface.h"
 
 // Sets default values
 AHSBaseCharacter::AHSBaseCharacter()
@@ -21,7 +22,7 @@ AHSBaseCharacter::AHSBaseCharacter()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	SetReplicateMovement(true);
-	NetCullDistanceSquared = FMath::Square(3000.f); // 기본 거리 컷 (필요시 오버라이드)
+	NetCullDistanceSquared = FMath::Square(10000.f); // 기본 거리 컷 (필요시 오버라이드)
 
 	InitCapsule();
 	InitMesh();
@@ -66,6 +67,10 @@ void AHSBaseCharacter::InitMesh()
 
 void AHSBaseCharacter::InitCamera()
 {
+	if (GetClass()->ImplementsInterface(UHSIsAIInterface::StaticClass()))
+	{
+		// AI니까 제외 처리
+	}
 	// 카메라 붐을 생성하고 루트 컴포넌트에 부착합니다.
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -257,6 +262,12 @@ bool AHSBaseCharacter::IsNetRelevantFor(const AActor* RealViewer, const AActor* 
 	if (RealViewer == this || Viewer == this)
 	{
 		return true;
+	}
+
+	if (Viewer->GetClass()->ImplementsInterface(UHSIsAIInterface::StaticClass()))
+	{
+		// AI는 연관성 대상에서 제외
+		return false;
 	}
 
 	if (NetRelevancySightComponent)

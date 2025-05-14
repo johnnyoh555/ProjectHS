@@ -4,6 +4,25 @@
 #include "Character/HSGhostCharacter.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Component/HSMissionInteractComponent.h"
+
+AHSPlayerHiderCharacter::AHSPlayerHiderCharacter()
+{
+	MissionInteractComponent = CreateDefaultSubobject<UHSMissionInteractComponent>(TEXT("MissionInteractComponent"));
+}
+
+void AHSPlayerHiderCharacter::StartInteract()
+{
+	if (MissionInteractComponent)
+	{
+		MissionInteractComponent->RequestInteract();
+		UE_LOG(LogTemp, Warning, TEXT("HiderMissionInteract!"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("MissionInteractComponent is not initialized!"));
+	}
+}
 
 void AHSPlayerHiderCharacter::EnterDeathNotify()
 {

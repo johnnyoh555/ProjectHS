@@ -26,7 +26,7 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Sight")
-	float MaxSightDistance = 3000.0f;
+	float MaxSightDistance = 10000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Sight")
 	float MaxSightAngleDegrees = 55.0f;

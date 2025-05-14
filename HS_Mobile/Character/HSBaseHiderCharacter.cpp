@@ -13,6 +13,9 @@ AHSBaseHiderCharacter::AHSBaseHiderCharacter()
 {
     GetCapsuleComponent()->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel2);
 
+    // "같은 HiderCharacter끼리는 Ignore 처리"
+    //GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Ignore);
+
     static ConstructorHelpers::FObjectFinder<UAnimMontage> MontObj(TEXT("/Game/Animation/Montage/AM_Seeker_Attack.AM_Seeker_Attack"));
     if (MontObj.Succeeded())
     {

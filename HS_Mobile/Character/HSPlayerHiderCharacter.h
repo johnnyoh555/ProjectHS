@@ -14,6 +14,14 @@ class HS_MOBILE_API AHSPlayerHiderCharacter : public AHSBaseHiderCharacter
 {
 	GENERATED_BODY()
 	
+public:
+	AHSPlayerHiderCharacter();
+	
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interact", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UHSMissionInteractComponent> MissionInteractComponent;
+
+	virtual void StartInteract() override;
+
 	virtual void EnterDeathNotify() override;
 };
